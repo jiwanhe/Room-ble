@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RoomFun 藍牙測試</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #faf7f2;
+    --surface: #ffffff;
+    --ink: #1c1a17;
+    --muted: #6f685d;
+    --line: #e4ddd0;
+    --vibe: #3a7ca5;
+    --vibe-track: #d4e4ee;
+    --estim: #c25a3a;
+    --estim-track: #efd9d0;
+    --stop: #b4342a;
+    --ok: #2f7d4f;
+    --radius: 14px;
+    --pad-top: env(safe-area-inset-top, 0px);
+    --pad-bot: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17150f;
+      --surface: #211e18;
+      --ink: #efe9dd;
+      --muted: #9a9183;
+      --line: #342f26;
+      --vibe: #6fb0d4;
+      --vibe-track: #22323d;
+      --estim: #e08763;
+      --estim-track: #3a271f;
+      --stop: #e2564a;
+      --ok: #62b583;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Helvetica Neue", "PingFang TC", sans-serif;
+    padding: calc(16px + var(--pad-top)) 16px calc(120px + var(--pad-bot));
+    max-width: 560px;
+    margin: 0 auto;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 19px; font-weight: 650; margin: 0 0 2px; letter-spacing: .01em; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+
+  .conn-row { display: flex; gap: 10px; align-items: center; }
+  button {
+    font: inherit; border: none; border-radius: 10px;
+    padding: 11px 16px; font-weight: 600; cursor: pointer;
+    color: #fff; background: var(--vibe); -webkit-appearance: none;
+  }
+  button:active { filter: brightness(.92); }
+  button:disabled { opacity: .4; cursor: default; }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+
+  .status { font-size: 13.5px; color: var(--muted); margin-top: 12px; line-height: 1.5; word-break: break-all; }
+  .status b { color: var(--ink); font-weight: 600; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: 1px; }
+  .dot.on { background: var(--ok); }
+
+  .chan { margin-top: 2px; }
+  .chan + .chan { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .chan-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .chan-name { font-weight: 650; font-size: 15px; }
+  .chan-name.vibe { color: var(--vibe); }
+  .chan-name.estim { color: var(--estim); }
+  .val { font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 650; }
+
+  input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; margin: 6px 0; }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%;
+    background: #fff; border: 2px solid var(--line); margin-top: -11px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  }
+  .vibe input::-webkit-slider-runnable-track { background: var(--vibe-track); }
+  .vibe input::-webkit-slider-thumb { border-color: var(--vibe); }
+  .estim input::-webkit-slider-runnable-track { background: var(--estim-track); }
+  .estim input::-webkit-slider-thumb { border-color: var(--estim); }
+  input[type=range]:disabled::-webkit-slider-thumb { background: var(--line); }
+
+  .limitbar { font-size: 12.5px; color: var(--muted); display: flex; justify-content: space-between; margin-top: 4px; }
+
+  .lock-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 13.5px; color: var(--muted); }
+  .lock-row label { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+  .cap { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .cap input { width: 64px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--ink); font: inherit; }
+
+  .stopbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    padding: 12px 16px calc(12px + var(--pad-bot));
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line);
+  }
+  .stopbar button {
+    width: 100%; background: var(--stop); font-size: 17px; padding: 15px;
+    letter-spacing: .04em;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0 0 auto; height: var(--pad-top);
+    background: var(--bg); z-index: 11;
+  }
+  .log { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 8px; max-height: 92px; overflow-y: auto; line-height: 1.6; }
+</style>
+</head>
+<body>
+<h1>RoomFun 藍牙測試</h1>
+<p class="sub">驗證 iPad 能不能直接驅動玩具。先不接 AI。</p>
+
+<div class="card">
+  <div class="conn-row">
+    <button id="connect">連線</button>
+    <button id="disconnect" class="ghost" disabled>斷線</button>
+  </div>
+  <div class="status"><span class="dot" id="dot"></span><span id="status">未連線</span></div>
+  <div class="log" id="log"></div>
+</div>
+
+<div class="card">
+  <!-- 震動 -->
+  <div class="chan vibe" id="vibe-chan">
+    <div class="chan-head">
+      <span class="chan-name vibe">震動</span>
+      <span class="val" id="vibe-val">0</span>
+    </div>
+    <input type="range" id="vibe" min="0" max="100" value="0" disabled>
+    <div class="limitbar"><span>0</span><span>100</span></div>
+  </div>
+
+  <!-- 電流 -->
+  <div class="chan estim" id="estim-chan">
+    <div class="chan-head">
+      <span class="chan-name estim">微電流</span>
+      <span class="val" id="estim-val">0</span>
+    </div>
+    <input type="range" id="estim" min="0" max="30" value="0" disabled>
+    <div class="limitbar"><span>0</span><span id="estim-max-label">上限 30</span></div>
+    <div class="lock-row">
+      <label><input type="checkbox" id="estim-lock"> 解鎖微電流</label>
+    </div>
+    <div class="cap">
+      上限 <input type="number" id="estim-cap" value="30" min="1" max="100">
+      ／ 每秒最多 +<input type="number" id="estim-rate" value="10" min="1" max="100">
+    </div>
+  </div>
+</div>
+
+<div class="stopbar">
+  <button id="stop">強制停止</button>
+</div>
+
+<script>
+"use strict";
+(function () {
+  // ---- 協定常數（由抓包得出）----
+  const SERVICE  = 0x9000;                  // 主服務
+  const WRITE_CH = 0x9002;                  // 控制特徵（Write Without Response）
+  const NOTIFY_CH= 0x9001;                  // 查詢／心跳
+  const HDR = [0xA0, 0x98, 0x02];           // 指令前綴
+  const END = [0xA2, 0x80];                 // 結束工作階段
+  const TIMEOUT_MS = 60000;                 // 逾時自動歸零
+
+  // RoomFun 的服務/特徵用的是短 UUID 的完整型式
+  const uuid = n => `0000${n.toString(16).padStart(4,'0')}-0000-1000-8000-00805f9b34fb`;
+
+  // ---- 狀態 ----
+  let device = null, server = null, writeChar = null;
+  let vibe = 0, estim = 0;            // 目前實際輸出
+  let estimUnlocked = false;
+  let estimCap = 30, estimRate = 10;
+  let lastCmdAt = 0, rampTimer = null, timeoutTimer = null, heartbeatSeen = 0;
+
+  const $ = id => document.getElementById(id);
+  const el = {
+    connect:$('connect'), disconnect:$('disconnect'), stop:$('stop'),
+    status:$('status'), dot:$('dot'), log:$('log'),
+    vibe:$('vibe'), vibeVal:$('vibe-val'),
+    estim:$('estim'), estimVal:$('estim-val'),
+    estimLock:$('estim-lock'), estimCap:$('estim-cap'), estimRate:$('estim-rate'),
+    estimMaxLabel:$('estim-max-label'),
+  };
+
+  function log(msg) {
+    const t = new Date().toLocaleTimeString('zh-Hant', {hour12:false});
+    el.log.insertAdjacentHTML('afterbegin', `${t}　${msg}<br>`);
+  }
+  function setStatus(txt, connected) {
+    el.status.innerHTML = txt;
+    el.dot.classList.toggle('on', !!connected);
+  }
+
+  // ---- 送指令 ----
+  async function writeRaw(bytes) {
+    if (!writeChar) return false;
+    try {
+      await writeChar.writeValueWithoutResponse(new Uint8Array(bytes));
+      return true;
+    } catch (e) {
+      log('送出失敗：' + e.message);
+      return false;
+    }
+  }
+  async function pushState() {
+    lastCmdAt = Date.now();
+    await writeRaw([...HDR, vibe & 0xff, estim & 0xff]);
+  }
+
+  // ---- 強制停止（任何路徑都呼叫這個）----
+  async function hardStop(reason) {
+    vibe = 0; estim = 0;
+    el.vibe.value = 0; el.estim.value = 0;
+    el.vibeVal.textContent = '0'; el.estimVal.textContent = '0';
+    if (rampTimer) { clearInterval(rampTimer); rampTimer = null; }
+    await writeRaw([...HDR, 0, 0]);
+    if (reason) log('停止：' + reason);
+  }
+
+  // ---- 電流爬升限速：目標值不會立刻到，每 tick 逼近 ----
+  let estimTarget = 0;
+  function requestEstim(target) {
+    estimTarget = Math.min(target, estimCap);
+    if (rampTimer) return;
+    rampTimer = setInterval(async () => {
+      const stepPerTick = Math.max(1, Math.round(estimRate / 10)); // 每 100ms 一 tick
+      if (estim < estimTarget)      estim = Math.min(estimTarget, estim + stepPerTick);
+      else if (estim > estimTarget) estim = estimTarget;           // 往下可即時
+      else { clearInterval(rampTimer); rampTimer = null; }
+      el.estim.value = estim; el.estimVal.textContent = estim;
+      await pushState();
+    }, 100);
+  }
+
+  // ---- 逾時看門狗 ----
+  function armTimeout() {
+    clearInterval(timeoutTimer);
+    timeoutTimer = setInterval(() => {
+      if ((vibe || estim) && Date.now() - lastCmdAt > TIMEOUT_MS) {
+        hardStop(`逾時 ${TIMEOUT_MS/1000}s`);
+      }
+    }, 1000);
+  }
+
+  // ---- 連線 ----
+  async function connect() {
+    if (!navigator.bluetooth) {
+      setStatus('這個瀏覽器不支援 Web Bluetooth。iPad 請用 <b>Bluefy</b> 開這一頁。');
+      return;
+    }
+    try {
+      setStatus('請在彈窗中選擇 RoomFun…');
+      device = await navigator.bluetooth.requestDevice({
+        filters: [{ name: 'RoomFun' }],
+        optionalServices: [uuid(SERVICE)]
+      });
+      device.addEventListener('gattserverdisconnected', onDisconnect);
+      setStatus('連線中…');
+      server = await device.gatt.connect();
+      const svc = await server.getPrimaryService(uuid(SERVICE));
+      writeChar = await svc.getCharacteristic(uuid(WRITE_CH));
+
+      // 訂閱心跳 / 查詢回報（可有可無，純觀察）
+      try {
+        const nchar = await svc.getCharacteristic(uuid(NOTIFY_CH));
+        await nchar.startNotifications();
+        nchar.addEventListener('characteristicvaluechanged', () => { heartbeatSeen = Date.now(); });
+      } catch (_) {}
+
+      // 照抄原廠初始化那串讀取（設備需要被喚醒）
+      await warmup(svc);
+
+      setStatus('<b>已連線</b>：RoomFun', true);
+      log('連線成功');
+      el.connect.disabled = true; el.disconnect.disabled = false;
+      el.vibe.disabled = false;
+      armTimeout();
+    } catch (e) {
+      setStatus('連線失敗：' + e.message);
+      log('連線失敗：' + e.message);
+    }
+  }
+
+  // 原廠連線後會依序讀幾個 handle（電量/韌體/序號），這裡盡力照做，失敗不影響控制
+  async function warmup(svc) {
+    try {
+      const n = await svc.getCharacteristic(uuid(NOTIFY_CH));
+      // 讀一次就好，確認通道活著
+      await n.readValue().catch(()=>{});
+      log('初始化完成');
+    } catch (_) {}
+  }
+
+  function onDisconnect() {
+    writeChar = null; server = null;
+    vibe = 0; estim = 0;
+    el.vibe.value = 0; el.estim.value = 0;
+    el.vibeVal.textContent = '0'; el.estimVal.textContent = '0';
+    el.vibe.disabled = true; el.estim.disabled = true;
+    el.connect.disabled = false; el.disconnect.disabled = true;
+    if (rampTimer) { clearInterval(rampTimer); rampTimer = null; }
+    setStatus('已斷線');
+    log('連線中斷');
+  }
+
+  async function disconnect() {
+    await hardStop('手動斷線');
+    await writeRaw(END);
+    if (device && device.gatt.connected) device.gatt.disconnect();
+  }
+
+  // ---- 事件 ----
+  el.connect.onclick = connect;
+  el.disconnect.onclick = disconnect;
+  el.stop.onclick = () => hardStop('手動');
+
+  el.vibe.oninput = async () => {
+    vibe = parseInt(el.vibe.value, 10);
+    el.vibeVal.textContent = vibe;
+    await pushState();
+  };
+
+  el.estim.oninput = () => {
+    if (!estimUnlocked) { el.estim.value = estim; return; }
+    requestEstim(parseInt(el.estim.value, 10));
+    el.estimVal.textContent = Math.min(parseInt(el.estim.value,10), estimCap);
+  };
+
+  el.estimLock.onchange = () => {
+    estimUnlocked = el.estimLock.checked;
+    el.estim.disabled = !(estimUnlocked && writeChar);
+    if (!estimUnlocked) requestEstim(0);
+    log('微電流' + (estimUnlocked ? '已解鎖' : '已鎖定'));
+  };
+  // 連線後才允許解鎖生效
+  const origConnect = connect;
+
+  el.estimCap.onchange = () => {
+    estimCap = Math.max(1, Math.min(100, parseInt(el.estimCap.value,10) || 30));
+    el.estimCap.value = estimCap;
+    el.estim.max = estimCap;
+    el.estimMaxLabel.textContent = '上限 ' + estimCap;
+    if (estim > estimCap) requestEstim(estimCap);
+  };
+  el.estimRate.onchange = () => {
+    estimRate = Math.max(1, Math.min(100, parseInt(el.estimRate.value,10) || 10));
+    el.estimRate.value = estimRate;
+  };
+
+  // 解鎖的 checkbox 只有在連線後才真的放行滑桿
+  const estimSliderGate = setInterval(() => {
+    el.estim.disabled = !(estimUnlocked && writeChar);
+  }, 500);
+
+  // 頁面被切到背景時保守起見停下來（iOS 會暫停連線）
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && writeChar) log('頁面切到背景，連線可能被系統暫停');
+  });
+
+  setStatus('未連線 — 用 Bluefy 開這一頁再按連線');
+})();
+</script>
+</body>
+</html>
