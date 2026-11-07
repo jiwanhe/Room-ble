@@ -69,6 +69,8 @@
       <input type="number" id="rate" value="10" min="1" max="100">
     </div>
   </div>
+  <label class="field">震動自動停（分鐘，0＝不自動停）</label>
+  <input type="number" id="vtimeout" value="15" min="0" max="120">
 
   <div class="lock">
     <input type="checkbox" id="estimLock">
@@ -98,16 +100,17 @@
   const HDR=[0xA0,0x98,0x02], END=[0xA2,0x80];
   const uuid=n=>`0000${n.toString(16).padStart(4,'0')}-0000-1000-8000-00805f9b34fb`;
   const POLL_MS=300;            // 每 0.3 秒問一次中繼站
-  const TIMEOUT_MS=60000;       // 中繼站 60 秒沒更新就歸零
+  const ESTIM_TIMEOUT_MS=90000; // 電流安全看門狗：90 秒沒更新就歸零（電流一律從嚴）
+  // 震動的逾時改成使用者可調，見 cfg.vTimeoutMs
 
   // ---- 狀態 ----
   let device=null,server=null,writeChar=null,running=false;
   let vibe=0, estim=0, estimTarget=0;
   let pollTimer=null, rampTimer=null;
-  let cfg={relay:'',secret:'',cap:30,rate:10,estimOK:false};
+  let cfg={relay:'',secret:'',cap:30,rate:10,estimOK:false,vTimeoutMs:15*60000};
 
   const $=id=>document.getElementById(id);
-  const el={relay:$('relay'),secret:$('secret'),cap:$('cap'),rate:$('rate'),
+  const el={relay:$('relay'),secret:$('secret'),cap:$('cap'),rate:$('rate'),vtimeout:$('vtimeout'),
     estimLock:$('estimLock'),start:$('start'),stop:$('stop'),hardstop:$('hardstop'),
     status:$('status'),dot:$('dot'),nVibe:$('nVibe'),nEstim:$('nEstim'),log:$('log')};
 
@@ -121,6 +124,7 @@
   function load(){try{const s=JSON.parse(localStorage.getItem('rf_cfg')||'{}');
     if(s.relay)el.relay.value=s.relay; if(s.secret)el.secret.value=s.secret;
     if(s.cap)el.cap.value=s.cap; if(s.rate)el.rate.value=s.rate;
+    if(s.vTimeoutMs!=null)el.vtimeout.value=Math.round(s.vTimeoutMs/60000);
     if(s.estimOK)el.estimLock.checked=true;}catch(_){}}
 
   // ---- 藍牙寫入 ----
@@ -186,13 +190,18 @@
       if(r.status===403){setStatus('密語不符，已停止',false);stopReceiving();return;}
       const s=await r.json();
 
-      // 逾時保護：中繼站太久沒更新 → 歸零
-      if(s.ts && Date.now()-s.ts>TIMEOUT_MS){ estimTarget=0; if(estim>0)stepEstim();
-        if(vibe>0){vibe=0;showNums();await pushState();} return; }
-
       if(s.stop){ await hardStop('收到停止'); return; }
 
-      // 震動：即時
+      const age = s.ts ? Date.now()-s.ts : 0;
+
+      // 電流安全看門狗：一律從嚴，太久沒更新就先歸零電流
+      if(age>ESTIM_TIMEOUT_MS && estim>0){ estimTarget=0; stepEstim(); }
+
+      // 震動逾時：使用者可調；0＝不自動停
+      const vTimedOut = cfg.vTimeoutMs>0 && age>cfg.vTimeoutMs;
+      if(vTimedOut){ if(vibe>0){vibe=0;showNums();await pushState();} return; }
+
+      // 震動：維持中繼站當前值（持續送，不會自己斷）
       const nv=clamp(s.vibe);
       if(nv!==vibe){ vibe=nv; showNums(); await pushState(); }
 
@@ -210,6 +219,7 @@
     cfg={relay:el.relay.value.trim().replace(/\/$/,''), secret:el.secret.value.trim(),
       cap:Math.max(1,Math.min(100,+el.cap.value||30)),
       rate:Math.max(1,Math.min(100,+el.rate.value||10)),
+      vTimeoutMs:Math.max(0,Math.min(120,+el.vtimeout.value||15))*60000,
       estimOK:el.estimLock.checked};
     if(!cfg.relay||!cfg.secret){setStatus('請先填中繼站網址和密語');return;}
     save();
