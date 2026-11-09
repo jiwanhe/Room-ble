@@ -3,261 +3,307 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>RoomFun 接收端</title>
+<title>玩具接收端</title>
 <style>
-  :root {
+  :root{
     color-scheme: light dark;
-    --bg:#faf7f2; --surface:#fff; --ink:#1c1a17; --muted:#6f685d; --line:#e4ddd0;
-    --vibe:#3a7ca5; --estim:#c25a3a; --stop:#b4342a; --ok:#2f7d4f; --warn:#b5860b;
+    --bg:#faf7f2; --surface:#fff; --ink:#1c1a17; --muted:#6f685d; --faint:#aaa; --line:#e4ddd0;
+    --vibe:#2f9aa3; --estim:#c25a3a; --pump:#7a5ba8; --stop:#b4342a; --ok:#2f7d4f; --warn:#b5860b;
     --radius:14px; --pt:env(safe-area-inset-top,0px); --pb:env(safe-area-inset-bottom,0px);
   }
   @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
     --bg:#17150f; --surface:#211e18; --ink:#efe9dd; --muted:#9a9183; --line:#342f26;
-    --vibe:#6fb0d4; --estim:#e08763; --stop:#e2564a; --ok:#62b583; --warn:#d9ad4a;
+    --vibe:#6fb0d4; --estim:#e08763; --pump:#a78cd4; --stop:#e2564a; --ok:#62b583; --warn:#d9ad4a;
   }}
-  *{box-sizing:border-box} html,body{margin:0;height:100%}
+  *{box-sizing:border-box} html,body{margin:0}
   body{background:var(--bg);color:var(--ink);
     font-family:-apple-system,"Helvetica Neue","PingFang TC",sans-serif;
-    padding:calc(16px + var(--pt)) 16px calc(16px + var(--pb));
-    max-width:560px;margin:0 auto;-webkit-text-size-adjust:100%;}
+    padding:calc(16px + var(--pt)) 16px calc(100px + var(--pb));max-width:560px;margin:0 auto}
   body::before{content:"";position:fixed;inset:0 0 auto;height:var(--pt);background:var(--bg);z-index:11}
   h1{font-size:19px;font-weight:650;margin:0 0 2px}
-  .sub{color:var(--muted);font-size:13px;margin:0 0 18px}
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
-  label.field{display:block;font-size:13px;color:var(--muted);margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:15px;margin-bottom:12px}
+  label.f{display:block;font-size:12.5px;color:var(--muted);margin:0 0 5px}
   input[type=text],input[type=number]{width:100%;padding:10px 12px;border:1px solid var(--line);
-    border-radius:9px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:12px}
-  .row{display:flex;gap:10px}
-  .row>div{flex:1}
-  button{font:inherit;border:none;border-radius:10px;padding:12px 16px;font-weight:600;
-    cursor:pointer;color:#fff;background:var(--vibe);-webkit-appearance:none;width:100%}
-  button:active{filter:brightness(.92)}
+    border-radius:9px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:11px}
+  .row{display:flex;gap:10px} .row>div{flex:1}
+  button{font:inherit;border:none;border-radius:10px;padding:11px 16px;font-weight:600;cursor:pointer;color:#fff;background:var(--vibe);-webkit-appearance:none}
+  button:active{filter:brightness(.92)} button:disabled{opacity:.4}
   button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
-  button.stop{background:var(--stop);font-size:16px;letter-spacing:.03em}
-  .status{font-size:13.5px;color:var(--muted);margin-top:12px;line-height:1.6}
-  .status b{color:var(--ink)} .dot{display:inline-block;width:8px;height:8px;border-radius:50%;
-    background:var(--muted);margin-right:6px;vertical-align:1px} .dot.on{background:var(--ok)}
-  .live{display:flex;gap:18px;margin-top:4px}
-  .live div{flex:1}
-  .live .k{font-size:12px;color:var(--muted)}
-  .live .n{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums}
-  .live .vibe{color:var(--vibe)} .live .estim{color:var(--estim)}
-  .lock{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted);margin:2px 0 12px}
-  .warn{color:var(--warn);font-size:12.5px;margin-top:6px}
-  .log{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:10px;
-    max-height:88px;overflow-y:auto;line-height:1.6}
-  .big-stop{position:sticky;bottom:calc(var(--pb));margin-top:14px}
+  .dev-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .dev-head .nm{font-weight:650;font-size:15px;flex:1}
+  .dev-head .nm.rf{color:var(--vibe)} .dev-head .nm.ggl{color:var(--pump)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--faint)}
+  .dot.on{background:var(--ok)} .dot.err{background:var(--stop)}
+  .dev-conn{display:flex;gap:8px;margin-bottom:10px}
+  .dev-conn button{flex:1;padding:9px}
+  .live{display:flex;gap:16px;margin-top:4px}
+  .live div{flex:1} .live .k{font-size:11.5px;color:var(--muted)}
+  .live .n{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}
+  .live .vibe{color:var(--vibe)} .live .estim{color:var(--estim)} .live .pump{color:var(--pump)}
+  .cfg-line{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .lock{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);margin-top:8px}
+  .warn{color:var(--warn);font-size:12px;margin-top:6px}
+  .status{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5;word-break:break-all}
+  .status b{color:var(--ink)}
+  .log{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:8px;max-height:80px;overflow-y:auto;line-height:1.6}
+  .stopbar{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:12px 16px calc(12px + var(--pb));
+    background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+  .stopbar button{width:100%;background:var(--stop);font-size:17px;padding:15px;letter-spacing:.04em}
 </style>
 </head>
 <body>
-<h1>RoomFun 接收端</h1>
-<p class="sub">擺在玩具旁、用 Bluefy 開著。它會自動聽中繼站的指令。</p>
-
-<div class="card" id="setup">
-  <label class="field">中繼站網址</label>
-  <input type="text" id="relay" placeholder="https://roomfun-relay.rinazusa.workers.dev" autocapitalize="off" autocorrect="off" spellcheck="false">
-  <label class="field">通關密語</label>
-  <input type="text" id="secret" placeholder="跟中繼站設的同一串" autocapitalize="off" autocorrect="off" spellcheck="false">
-
-  <div class="row">
-    <div>
-      <label class="field">電流上限</label>
-      <input type="number" id="cap" value="30" min="1" max="100">
-    </div>
-    <div>
-      <label class="field">電流每秒最多 +</label>
-      <input type="number" id="rate" value="10" min="1" max="100">
-    </div>
-  </div>
-  <label class="field">震動自動停（分鐘，0＝不自動停）</label>
-  <input type="number" id="vtimeout" value="15" min="0" max="120">
-
-  <div class="lock">
-    <input type="checkbox" id="estimLock">
-    <label for="estimLock">允許微電流（不勾則電流一律為 0）</label>
-  </div>
-  <div class="warn">電流請從小開始。瞬間跳高會痛，也可能傷到。</div>
-</div>
+<h1>玩具接收端</h1>
+<p class="sub">擺在玩具旁、用 Bluefy 開著。兩支可同時連、同時聽中繼。</p>
 
 <div class="card">
+  <label class="f">中繼站網址</label>
+  <input type="text" id="relay" placeholder="https://roomfun-relay.rinazusa.workers.dev" autocapitalize="off" autocorrect="off" spellcheck="false">
+  <label class="f">通關密語</label>
+  <input type="text" id="secret" placeholder="跟中繼站、前端同一串" autocapitalize="off" autocorrect="off" spellcheck="false">
   <button id="start">開始接收</button>
-  <button id="stop" class="ghost" style="margin-top:8px" disabled>停止接收</button>
-  <div class="status"><span class="dot" id="dot"></span><span id="status">尚未連線</span></div>
-  <div class="live">
-    <div><div class="k">震動</div><div class="n vibe" id="nVibe">0</div></div>
-    <div><div class="k">微電流</div><div class="n estim" id="nEstim">0</div></div>
-  </div>
-  <div class="log" id="log"></div>
+  <button id="stopRecv" class="ghost" style="margin-top:8px" disabled>停止接收</button>
+  <div class="status"><span id="recvStatus">填好設定後按「開始接收」</span></div>
 </div>
 
-<button class="stop big-stop" id="hardstop">強制停止</button>
+<!-- RoomFun -->
+<div class="card">
+  <div class="dev-head"><span class="dot" id="rfDot"></span><span class="nm rf">RoomFun</span><span id="rfConn" style="font-size:12px;color:var(--muted)">未連</span></div>
+  <div class="dev-conn">
+    <button id="rfConnect" style="background:var(--vibe)">連線</button>
+    <button id="rfDisc" class="ghost" disabled>斷線</button>
+  </div>
+  <div class="live">
+    <div><div class="k">震動</div><div class="n vibe" id="rfVibe">0</div></div>
+    <div><div class="k">微電流</div><div class="n estim" id="rfEstim">0</div></div>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <div><label class="f">電流上限</label><input type="number" id="cap" value="30" min="1" max="100"></div>
+    <div><label class="f">電流每秒最多 +</label><input type="number" id="rate" value="10" min="1" max="100"></div>
+  </div>
+  <label class="f">震動自動停（分，0=不停）</label>
+  <input type="number" id="rfTimeout" value="15" min="0" max="120">
+  <div class="lock"><input type="checkbox" id="estimLock"> <label for="estimLock">允許微電流（不勾則電流一律 0）</label></div>
+  <div class="warn">電流請從小開始，瞬間跳高會痛也可能傷。</div>
+</div>
+
+<!-- GGL -->
+<div class="card">
+  <div class="dev-head"><span class="dot" id="gglDot"></span><span class="nm ggl">GGL 砲機</span><span id="gglConn" style="font-size:12px;color:var(--muted)">未連</span></div>
+  <div class="dev-conn">
+    <button id="gglConnect" style="background:var(--pump)">連線</button>
+    <button id="gglDisc" class="ghost" disabled>斷線</button>
+  </div>
+  <div class="live">
+    <div><div class="k">強度</div><div class="n pump" id="gglLevel">0</div></div>
+  </div>
+  <label class="f" style="margin-top:12px">砲機自動停（分，0=不停）</label>
+  <input type="number" id="gglTimeout" value="10" min="0" max="120">
+</div>
+
+<div class="stopbar"><button id="hardstop">全部強制停止</button></div>
 
 <script>
 "use strict";
 (function(){
-  // ---- 協定 ----
-  const SERVICE=0x9000, WRITE_CH=0x9002, NOTIFY_CH=0x9001;
-  const HDR=[0xA0,0x98,0x02], END=[0xA2,0x80];
-  const uuid=n=>`0000${n.toString(16).padStart(4,'0')}-0000-1000-8000-00805f9b34fb`;
-  const POLL_MS=300;            // 每 0.3 秒問一次中繼站
-  const ESTIM_TIMEOUT_MS=90000; // 電流安全看門狗：90 秒沒更新就歸零（電流一律從嚴）
-  // 震動的逾時改成使用者可調，見 cfg.vTimeoutMs
+  const POLL_MS=300;
+  const ESTIM_TIMEOUT_MS=90000;
 
-  // ---- 狀態 ----
-  let device=null,server=null,writeChar=null,running=false;
-  let vibe=0, estim=0, estimTarget=0;
-  let pollTimer=null, rampTimer=null;
-  let cfg={relay:'',secret:'',cap:30,rate:10,estimOK:false,vTimeoutMs:15*60000};
+  // ---- RoomFun 協定 ----
+  const RF={ service:0x9000, write:0x9002, notify:0x9001,
+    hdr:[0xA0,0x98,0x02], end:[0xA2,0x80] };
+  const u16=n=>`0000${n.toString(16).padStart(4,'0')}-0000-1000-8000-00805f9b34fb`;
+
+  // ---- GGL 協定 ----
+  const GGL={ service:'0000fffe-0000-1000-8000-00805f9b34fb',
+    write:'0000fe02-0000-1000-8000-00805f9b34fb',
+    reset:[ Uint8Array.of(0x01,0x12,...Array(18).fill(0)),
+            Uint8Array.of(0x02,0x12,...Array(18).fill(0)),
+            Uint8Array.of(0x05,0x12,...Array(18).fill(0)) ] };
+  function gglFrame(level255){const b=new Uint8Array(20);b[0]=0x03;b[1]=0x12;b[2]=level255&0xff;return b;}
 
   const $=id=>document.getElementById(id);
-  const el={relay:$('relay'),secret:$('secret'),cap:$('cap'),rate:$('rate'),vtimeout:$('vtimeout'),
-    estimLock:$('estimLock'),start:$('start'),stop:$('stop'),hardstop:$('hardstop'),
-    status:$('status'),dot:$('dot'),nVibe:$('nVibe'),nEstim:$('nEstim'),log:$('log')};
-
+  const clamp=x=>{let n=parseInt(x,10);if(isNaN(n))n=0;return Math.max(0,Math.min(100,n));};
+  const to255=v=>Math.round(clamp(v)/100*255);
   function log(m){const t=new Date().toLocaleTimeString('zh-Hant',{hour12:false});
-    el.log.insertAdjacentHTML('afterbegin',`${t}　${m}<br>`);}
-  function setStatus(t,on){el.status.innerHTML=t;el.dot.classList.toggle('on',!!on);}
-  function showNums(){el.nVibe.textContent=vibe;el.nEstim.textContent=estim;}
+    const box=$('recvStatus'); /* 共用狀態列顯示最後訊息 */ }
 
-  // 記住上次填的設定
-  function save(){try{localStorage.setItem('rf_cfg',JSON.stringify(cfg));}catch(_){}}
-  function load(){try{const s=JSON.parse(localStorage.getItem('rf_cfg')||'{}');
-    if(s.relay)el.relay.value=s.relay; if(s.secret)el.secret.value=s.secret;
-    if(s.cap)el.cap.value=s.cap; if(s.rate)el.rate.value=s.rate;
-    if(s.vTimeoutMs!=null)el.vtimeout.value=Math.round(s.vTimeoutMs/60000);
-    if(s.estimOK)el.estimLock.checked=true;}catch(_){}}
+  // ===== 全域 =====
+  let running=false, pollTimer=null;
+  let cfg={relay:'',secret:''};
 
-  // ---- 藍牙寫入 ----
-  async function writeRaw(b){ if(!writeChar)return false;
-    try{await writeChar.writeValueWithoutResponse(new Uint8Array(b));return true;}
-    catch(e){log('送出失敗：'+e.message);return false;}}
-  async function pushState(){ await writeRaw([...HDR, vibe&0xff, estim&0xff]); }
+  // ===== RoomFun 裝置狀態（獨立）=====
+  const rf={ device:null,server:null,ch:null,
+    vibe:0,estim:0,estimTarget:0,rampTimer:null,
+    cap:30,rate:10,estimOK:false,vTimeoutMs:15*60000 };
 
-  async function hardStop(reason){
-    estimTarget=0; vibe=0; estim=0; showNums();
-    if(rampTimer){clearInterval(rampTimer);rampTimer=null;}
-    await writeRaw([...HDR,0,0]);
-    if(reason)log('停止：'+reason);
+  // ===== GGL 裝置狀態（獨立）=====
+  const ggl={ device:null,server:null,ch:null, level:0, timeoutMs:10*60000 };
+
+  // ---------- RoomFun 寫入 ----------
+  async function rfWrite(bytes){ if(!rf.ch)return; try{await rf.ch.writeValueWithoutResponse(new Uint8Array(bytes));}catch(e){} }
+  async function rfPush(){ await rfWrite([...RF.hdr, rf.vibe&0xff, rf.estim&0xff]); }
+  async function rfStop(){ rf.estimTarget=0; rf.vibe=0; rf.estim=0; rfShow();
+    if(rf.rampTimer){clearInterval(rf.rampTimer);rf.rampTimer=null;} await rfWrite([...RF.hdr,0,0]); }
+  function rfShow(){ $('rfVibe').textContent=rf.vibe; $('rfEstim').textContent=rf.estim; }
+  function rfRamp(){ if(rf.rampTimer)return;
+    rf.rampTimer=setInterval(async()=>{ const step=Math.max(1,Math.round(rf.rate/10));
+      if(rf.estim<rf.estimTarget)rf.estim=Math.min(rf.estimTarget,rf.estim+step);
+      else if(rf.estim>rf.estimTarget)rf.estim=rf.estimTarget;
+      else{clearInterval(rf.rampTimer);rf.rampTimer=null;}
+      rfShow(); await rfPush(); },100); }
+
+  async function rfConnect(){
+    if(!navigator.bluetooth){$('recvStatus').innerHTML='請用 <b>Bluefy</b> 開這一頁';return;}
+    try{
+      rf.device=await navigator.bluetooth.requestDevice({filters:[{name:'RoomFun'}],optionalServices:[u16(RF.service)]});
+      rf.device.addEventListener('gattserverdisconnected',()=>rfGone());
+      rf.server=await rf.device.gatt.connect();
+      const svc=await rf.server.getPrimaryService(u16(RF.service));
+      rf.ch=await svc.getCharacteristic(u16(RF.write));
+      try{const n=await svc.getCharacteristic(u16(RF.notify));await n.startNotifications().catch(()=>{});}catch(_){}
+      setDot('rf',true); $('rfConn').textContent='已連線';
+      $('rfConnect').disabled=true; $('rfDisc').disabled=false;
+    }catch(e){ $('rfConn').textContent='連線失敗'; }
+  }
+  function rfGone(){ rf.ch=null;rf.server=null; if(rf.rampTimer){clearInterval(rf.rampTimer);rf.rampTimer=null;}
+    setDot('rf',false,running); $('rfConn').textContent=running?'中斷，重連中…':'已斷線';
+    $('rfConnect').disabled=false; $('rfDisc').disabled=true;
+    if(running&&rf.device) setTimeout(rfReconnect,1500); }
+  async function rfReconnect(){ if(!running||!rf.device)return;
+    try{ rf.server=await rf.device.gatt.connect();
+      const svc=await rf.server.getPrimaryService(u16(RF.service));
+      rf.ch=await svc.getCharacteristic(u16(RF.write));
+      setDot('rf',true); $('rfConn').textContent='已連線'; }catch(e){ setTimeout(rfReconnect,2000); } }
+  async function rfDisconnect(){ await rfStop(); await rfWrite(RF.end);
+    if(rf.device&&rf.device.gatt.connected)rf.device.gatt.disconnect(); }
+
+  // ---------- GGL 寫入 ----------
+  async function gglWrite(bytes){ if(!ggl.ch)return; try{await ggl.ch.writeValueWithResponse(bytes);}catch(e){} }
+  async function gglPush(){ await gglWrite(gglFrame(to255(ggl.level))); }
+  async function gglStop(){ ggl.level=0; gglShow(); await gglWrite(gglFrame(0)); }
+  function gglShow(){ $('gglLevel').textContent=ggl.level; }
+
+  async function gglConnect(){
+    if(!navigator.bluetooth){$('recvStatus').innerHTML='請用 <b>Bluefy</b> 開這一頁';return;}
+    try{
+      ggl.device=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'GGL'}],optionalServices:[GGL.service]});
+      ggl.device.addEventListener('gattserverdisconnected',()=>gglGone());
+      ggl.server=await ggl.device.gatt.connect();
+      const svc=await ggl.server.getPrimaryService(GGL.service);
+      ggl.ch=await svc.getCharacteristic(GGL.write);
+      setDot('ggl',true); $('gglConn').textContent='已連線';
+      $('gglConnect').disabled=true; $('gglDisc').disabled=false;
+    }catch(e){ $('gglConn').textContent='連線失敗'; }
+  }
+  function gglGone(){ ggl.ch=null;ggl.server=null;
+    setDot('ggl',false,running); $('gglConn').textContent=running?'中斷，重連中…':'已斷線';
+    $('gglConnect').disabled=false; $('gglDisc').disabled=true;
+    if(running&&ggl.device) setTimeout(gglReconnect,1500); }
+  async function gglReconnect(){ if(!running||!ggl.device)return;
+    try{ ggl.server=await ggl.device.gatt.connect();
+      const svc=await ggl.server.getPrimaryService(GGL.service);
+      ggl.ch=await svc.getCharacteristic(GGL.write);
+      setDot('ggl',true); $('gglConn').textContent='已連線'; }catch(e){ setTimeout(gglReconnect,2000); } }
+  async function gglDisconnect(){ await gglStop();
+    for(const f of GGL.reset){ await gglWrite(f); }
+    if(ggl.device&&ggl.device.gatt.connected)ggl.device.gatt.disconnect(); }
+
+  // ---------- 共用 ----------
+  function setDot(which,ok,reconnecting){
+    const d=$(which+'Dot'); d.classList.toggle('on',!!ok); d.classList.toggle('err',!ok&&!!reconnecting);
+  }
+  async function hardStopAll(reason){
+    await rfStop(); await gglStop();
+    $('recvStatus').innerHTML='<b>全部已停止</b>'+(reason?'（'+reason+'）':'');
   }
 
-  // 電流爬升限速
-  function stepEstim(){
-    if(rampTimer)return;
-    rampTimer=setInterval(async()=>{
-      const step=Math.max(1,Math.round(cfg.rate/10)); // 每100ms一tick
-      if(estim<estimTarget) estim=Math.min(estimTarget,estim+step);
-      else if(estim>estimTarget) estim=estimTarget;   // 下降即時
-      else{clearInterval(rampTimer);rampTimer=null;}
-      showNums(); await pushState();
-    },100);
-  }
-
-  // ---- 連藍牙 ----
-  async function connectBLE(){
-    if(!navigator.bluetooth){setStatus('這個瀏覽器不支援藍牙，請用 <b>Bluefy</b> 開。');return false;}
-    setStatus('請在彈窗選擇 RoomFun…');
-    device=await navigator.bluetooth.requestDevice({
-      filters:[{name:'RoomFun'}], optionalServices:[uuid(SERVICE)]});
-    device.addEventListener('gattserverdisconnected',onDisconnect);
-    server=await device.gatt.connect();
-    const svc=await server.getPrimaryService(uuid(SERVICE));
-    writeChar=await svc.getCharacteristic(uuid(WRITE_CH));
-    try{const n=await svc.getCharacteristic(uuid(NOTIFY_CH));
-      await n.startNotifications().catch(()=>{});}catch(_){}
-    log('藍牙已連線'); return true;
-  }
-  function onDisconnect(){
-    writeChar=null;server=null;
-    if(rampTimer){clearInterval(rampTimer);rampTimer=null;}
-    setStatus('藍牙中斷，正在重連…');
-    log('藍牙中斷');
-    if(running) setTimeout(tryReconnect,1500);
-  }
-  async function tryReconnect(){
-    if(!running||!device)return;
-    try{ server=await device.gatt.connect();
-      const svc=await server.getPrimaryService(uuid(SERVICE));
-      writeChar=await svc.getCharacteristic(uuid(WRITE_CH));
-      setStatus('<b>接收中</b>',true); log('重連成功');
-    }catch(e){ setTimeout(tryReconnect,2000); }
-  }
-
-  // ---- 輪詢中繼站 ----
+  // ---------- 輪詢中繼 ----------
   async function poll(){
     if(!cfg.relay||!cfg.secret)return;
     try{
       const r=await fetch(`${cfg.relay}/get?k=${encodeURIComponent(cfg.secret)}`,{cache:'no-store'});
-      if(r.status===403){setStatus('密語不符，已停止',false);stopReceiving();return;}
+      if(r.status===403){ $('recvStatus').innerHTML='<b>密語不符，已停止</b>'; stopReceiving(); return; }
       const s=await r.json();
+      const age=s.ts?Date.now()-s.ts:0;
 
-      if(s.stop){ await hardStop('收到停止'); return; }
+      if(s.stop){ await hardStopAll('收到停止'); return; }
 
-      const age = s.ts ? Date.now()-s.ts : 0;
+      // ===== RoomFun =====
+      if(rf.ch){
+        // 電流安全看門狗
+        if(age>ESTIM_TIMEOUT_MS && rf.estim>0){ rf.estimTarget=0; rfRamp(); }
+        // 震動逾時（可調）
+        const vTimedOut = rf.vTimeoutMs>0 && age>rf.vTimeoutMs;
+        if(vTimedOut){ if(rf.vibe>0){rf.vibe=0;rfShow();await rfPush();} }
+        else {
+          const nv=clamp(s.vibe);
+          if(nv!==rf.vibe){ rf.vibe=nv; rfShow(); await rfPush(); }
+        }
+        // 電流
+        let ne=clamp(s.estim);
+        if(!rf.estimOK) ne=0;
+        ne=Math.min(ne,rf.cap);
+        if(ne!==rf.estimTarget){ rf.estimTarget=ne; rfRamp(); }
+      }
 
-      // 電流安全看門狗：一律從嚴，太久沒更新就先歸零電流
-      if(age>ESTIM_TIMEOUT_MS && estim>0){ estimTarget=0; stepEstim(); }
-
-      // 震動逾時：使用者可調；0＝不自動停
-      const vTimedOut = cfg.vTimeoutMs>0 && age>cfg.vTimeoutMs;
-      if(vTimedOut){ if(vibe>0){vibe=0;showNums();await pushState();} return; }
-
-      // 震動：維持中繼站當前值（持續送，不會自己斷）
-      const nv=clamp(s.vibe);
-      if(nv!==vibe){ vibe=nv; showNums(); await pushState(); }
-
-      // 電流：受上限 + 解鎖 + 爬升限速三重把關
-      let ne=clamp(s.estim);
-      if(!cfg.estimOK) ne=0;
-      ne=Math.min(ne,cfg.cap);
-      if(ne!==estimTarget){ estimTarget=ne; stepEstim(); }
+      // ===== GGL =====
+      if(ggl.ch){
+        const pTimedOut = ggl.timeoutMs>0 && age>ggl.timeoutMs;
+        if(pTimedOut){ if(ggl.level>0){ggl.level=0;gglShow();await gglPush();} }
+        else {
+          const np=clamp(s.pump);
+          if(np!==ggl.level){ ggl.level=np; gglShow(); await gglPush(); }
+        }
+      }
     }catch(e){ /* 網路抖動，下次再問 */ }
   }
-  function clamp(x){let n=parseInt(x,10);if(isNaN(n))n=0;return Math.max(0,Math.min(100,n));}
 
-  // ---- 開始 / 停止 ----
-  async function startReceiving(){
-    cfg={relay:el.relay.value.trim().replace(/\/$/,''), secret:el.secret.value.trim(),
-      cap:Math.max(1,Math.min(100,+el.cap.value||30)),
-      rate:Math.max(1,Math.min(100,+el.rate.value||10)),
-      vTimeoutMs:Math.max(0,Math.min(120,+el.vtimeout.value||15))*60000,
-      estimOK:el.estimLock.checked};
-    if(!cfg.relay||!cfg.secret){setStatus('請先填中繼站網址和密語');return;}
+  // ---------- 開始 / 停止接收 ----------
+  function readCfg(){
+    cfg={ relay:$('relay').value.trim().replace(/\/$/,''), secret:$('secret').value.trim() };
+    rf.cap=Math.max(1,Math.min(100,+$('cap').value||30));
+    rf.rate=Math.max(1,Math.min(100,+$('rate').value||10));
+    rf.vTimeoutMs=Math.max(0,Math.min(120,+$('rfTimeout').value||15))*60000;
+    rf.estimOK=$('estimLock').checked;
+    ggl.timeoutMs=Math.max(0,Math.min(120,+$('gglTimeout').value||10))*60000;
     save();
-    try{
-      const ok=await connectBLE(); if(!ok)return;
-      running=true;
-      el.start.disabled=true; el.stop.disabled=false;
-      setStatus('<b>接收中</b>',true);
-      clearInterval(pollTimer); pollTimer=setInterval(poll,POLL_MS);
-    }catch(e){ setStatus('連線失敗：'+e.message); log(e.message); }
+  }
+  function startReceiving(){
+    readCfg();
+    if(!cfg.relay||!cfg.secret){ $('recvStatus').textContent='請先填中繼站網址和密語'; return; }
+    if(!rf.ch && !ggl.ch){ $('recvStatus').textContent='請先連線至少一支玩具'; return; }
+    running=true;
+    $('start').disabled=true; $('stopRecv').disabled=false;
+    $('recvStatus').innerHTML='<b>接收中</b>';
+    clearInterval(pollTimer); pollTimer=setInterval(poll,POLL_MS);
   }
   async function stopReceiving(){
     running=false; clearInterval(pollTimer);
-    await hardStop('停止接收');
-    await writeRaw(END);
-    if(device&&device.gatt.connected)device.gatt.disconnect();
-    el.start.disabled=false; el.stop.disabled=true;
-    setStatus('已停止');
+    await hardStopAll('停止接收');
+    $('start').disabled=false; $('stopRecv').disabled=true;
+    $('recvStatus').textContent='已停止接收';
   }
 
-  el.start.onclick=startReceiving;
-  el.stop.onclick=stopReceiving;
-  el.hardstop.onclick=()=>hardStop('手動');
-  el.estimLock.onchange=()=>{cfg.estimOK=el.estimLock.checked;
-    if(!cfg.estimOK){estimTarget=0;stepEstim();} save();
-    log('微電流'+(cfg.estimOK?'已允許':'已關閉'));};
+  // ---------- 設定記憶 ----------
+  function save(){ try{ localStorage.setItem('toy2_cfg',JSON.stringify({
+    relay:cfg.relay,secret:cfg.secret,cap:rf.cap,rate:rf.rate,
+    rfT:rf.vTimeoutMs/60000,estimOK:rf.estimOK,gglT:ggl.timeoutMs/60000 })); }catch(_){}}
+  function load(){ try{ const s=JSON.parse(localStorage.getItem('toy2_cfg')||'{}');
+    if(s.relay)$('relay').value=s.relay; if(s.secret)$('secret').value=s.secret;
+    if(s.cap)$('cap').value=s.cap; if(s.rate)$('rate').value=s.rate;
+    if(s.rfT!=null)$('rfTimeout').value=s.rfT; if(s.gglT!=null)$('gglTimeout').value=s.gglT;
+    if(s.estimOK)$('estimLock').checked=true; }catch(_){}}
 
-  // 防止 iPad 自動休眠中斷（盡力而為）
-  let wakeLock=null;
-  async function keepAwake(){ try{ if('wakeLock' in navigator)
-    wakeLock=await navigator.wakeLock.request('screen'); }catch(_){}}
-  document.addEventListener('visibilitychange',async()=>{
-    if(document.hidden){ log('頁面切到背景，連線可能被系統暫停'); }
-    else if(running){ await keepAwake(); }
-  });
+  // ---------- 綁定 ----------
+  $('rfConnect').onclick=rfConnect;  $('rfDisc').onclick=rfDisconnect;
+  $('gglConnect').onclick=gglConnect; $('gglDisc').onclick=gglDisconnect;
+  $('start').onclick=startReceiving;  $('stopRecv').onclick=stopReceiving;
+  $('hardstop').onclick=()=>hardStopAll('手動');
+  $('estimLock').onchange=()=>{ rf.estimOK=$('estimLock').checked; if(!rf.estimOK){rf.estimTarget=0;rfRamp();} save(); };
+  ['cap','rate','rfTimeout','gglTimeout'].forEach(id=>$(id).addEventListener('change',readCfg));
 
   load();
-  setStatus('填好設定後按「開始接收」');
 })();
 </script>
 </body>
