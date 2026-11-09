@@ -213,9 +213,17 @@
   function setDot(which,ok,reconnecting){
     const d=$(which+'Dot'); d.classList.toggle('on',!!ok); d.classList.toggle('err',!ok&&!!reconnecting);
   }
-  async function hardStopAll(reason){
+  // 本地停止（只停藍牙，不碰中繼）
+  async function localStopAll(reason){
     await rfStop(); await gglStop();
     $('recvStatus').innerHTML='<b>全部已停止</b>'+(reason?'（'+reason+'）':'');
+  }
+  // 使用者按下的強制停止：本地停 + 通知中繼歸零，否則下次輪詢舊值會把玩具叫醒
+  async function hardStopAll(reason){
+    await localStopAll(reason);
+    if(cfg.relay&&cfg.secret){
+      try{ await fetch(`${cfg.relay}/set?k=${encodeURIComponent(cfg.secret)}&stop=1`,{cache:'no-store'}); }catch(_){}
+    }
   }
 
   // ---------- 輪詢中繼 ----------
@@ -227,7 +235,7 @@
       const s=await r.json();
       const age=s.ts?Date.now()-s.ts:0;
 
-      if(s.stop){ await hardStopAll('收到停止'); return; }
+      if(s.stop){ await localStopAll('收到停止'); return; }
 
       // ===== RoomFun =====
       if(rf.ch){
